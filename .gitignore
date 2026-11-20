@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.tools/
+# raw downloads are large and re-creatable (see README → Setup)
+data-raw/
+__pycache__/
+*.pyc
