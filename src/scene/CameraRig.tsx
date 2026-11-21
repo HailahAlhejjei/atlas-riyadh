@@ -1,4 +1,5 @@
 import { CameraControls } from "@react-three/drei";
+import CameraControlsImpl from "camera-controls";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { Box3, Vector3 } from "three";
@@ -19,6 +20,20 @@ export function CameraRig({ meta, compact }: { meta: CityMeta; compact: boolean 
   // portrait screens see far less width: pull back so the whole city fits
   const k = Math.min(2.2, Math.max(compact ? 1.2 : 1, 0.95 / Math.max(aspect, 0.3)));
   const tmp = useMemo(() => new Vector3(), []);
+
+  // map-style input: left-drag / one finger moves across the ground, right-drag / two fingers rotate
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const A = CameraControlsImpl.ACTION;
+    c.mouseButtons.left = A.TRUCK;
+    c.mouseButtons.right = A.ROTATE;
+    c.mouseButtons.middle = A.DOLLY;
+    c.touches.one = A.TOUCH_TRUCK;
+    c.touches.two = A.TOUCH_DOLLY_ROTATE;
+    c.touches.three = A.TOUCH_ROTATE;
+    c.verticalDragToForward = true;
+  }, []);
 
   // keep the orbit target over the model so panning can't lose the city
   useEffect(() => {

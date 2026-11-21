@@ -7,6 +7,8 @@ import type { CityDataState } from "../data/useCityData";
 import { setState } from "../store";
 import { useT, type Key } from "../i18n";
 import { applyInsight } from "./Discover";
+import { C } from "../config/theme";
+import { HowIcon, LayerStack, MiniBars, OneIn, Waffle } from "./visuals";
 import { markTourSeen } from "./Tour";
 
 const enter = () =>
@@ -42,6 +44,26 @@ function answer(t: T, ins: Insight | undefined, total: number | undefined, nm: (
       return { big: t("a_park_big", { n: ins.value ? Math.round(1 / ins.value) : "—" }), line: t("a_park", { v: fmtPct(ins.value) }) };
     default:
       return { big: String(ins.value ?? "—"), line: ins.question };
+  }
+}
+
+function Viz({ ins, nm, label }: { ins?: Insight; nm: (i: number) => string; label: string }) {
+  if (!ins) return null;
+  switch (ins.id) {
+    case "density":
+      return <MiniBars rows={(ins.answer ?? []).slice(0, 3).map((a, i) => ({ name: nm(i), value: a.value }))} color={LAYER_COLOR.population} unit={label} />;
+    case "school_access":
+      return <Waffle value={ins.value} color={C.ivory} label={label} />;
+    case "health_access":
+      return <Waffle value={ins.value} color={C.amber} label={label} />;
+    case "metro_access":
+      return <Waffle value={ins.value} color={C.cyan} label={label} />;
+    case "road_density":
+      return <MiniBars rows={(ins.answer ?? []).slice(0, 3).map((a, i) => ({ name: nm(i), value: a.value }))} color={C.cyan} unit={label} />;
+    case "park_access":
+      return <OneIn n={ins.value ? 1 / ins.value : 3} color={C.green} label={label} />;
+    default:
+      return null;
   }
 }
 
@@ -112,11 +134,14 @@ export function Landing({ city }: { city: CityDataState }) {
       {/* ── The thought process, in the author's words */}
       <div className="sheet-sec story" ref={story}>
         <p className="kicker mono">{t("s1_kicker")}</p>
+        <div className="story-grid">
+        <LayerStack labels={{ population: t("L_population"), facilities: t("L_facilities"), transport: t("L_transport"), green: t("L_green"), buildings: t("L_buildings") }} />
         <blockquote>
           <p>{t("story_1")}</p>
           <p>{t("story_2")}</p>
           <p>{t("story_3")}</p>
         </blockquote>
+        </div>
       </div>
 
       {/* ── The questions, answered */}
@@ -132,6 +157,7 @@ export function Landing({ city }: { city: CityDataState }) {
                 const a = answer(t, ins, city.data.insights?.total_population, nameFor(ins));
                 return (
                   <div key={id} className="q-answer">
+                    <div className="q-viz"><Viz ins={ins} nm={nameFor(ins)} label={`${a.big} ${a.line}`} /></div>
                     <b>{a.big}</b>
                     <span>{a.line}</span>
                   </div>
@@ -167,9 +193,9 @@ export function Landing({ city }: { city: CityDataState }) {
           ))}
         </ol>
         <div className="how-steps">
-          <div><b className="mono">{t("how_pull")}</b><span>{t("how_pull_t")}</span></div>
-          <div><b className="mono">{t("how_stack")}</b><span>{t("how_stack_t")}</span></div>
-          <div><b className="mono">{t("how_click")}</b><span>{t("how_click_t")}</span></div>
+          <div><HowIcon kind="pull" /><b className="mono">{t("how_pull")}</b><span>{t("how_pull_t")}</span></div>
+          <div><HowIcon kind="stack" /><b className="mono">{t("how_stack")}</b><span>{t("how_stack_t")}</span></div>
+          <div><HowIcon kind="click" /><b className="mono">{t("how_click")}</b><span>{t("how_click_t")}</span></div>
         </div>
       </div>
 

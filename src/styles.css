@@ -383,3 +383,44 @@ html[lang="ar"] .discover-sec, html[lang="ar"] .eyebrow {
   .lang-btn { top: auto; bottom: 92px; left: auto; right: 16px; transform: none; }
   .fac-tag { font-size: 10.5px; }
 }
+
+/* ─────────────────── Landing visuals */
+.story-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 5vw, 72px); align-items: center; }
+.stack-art { width: 100%; max-width: 440px; overflow: visible; }
+.stack-art .sheet { animation: peel 7s cubic-bezier(.6, 0, .25, 1) infinite; }
+.stack-art .stack-label, .stack-art .tag-line { opacity: 0; animation: peel-label 7s ease infinite; }
+.stack-label { font-family: var(--head); font-size: 15px; fill: var(--ivory); }
+html[lang="ar"] .stack-label { font-family: "IBM Plex Sans Arabic", var(--body); }
+@keyframes peel { 0%, 12% { transform: translateY(0); } 38%, 72% { transform: translateY(var(--lift)); } 92%, 100% { transform: translateY(0); } }
+@keyframes peel-label { 0%, 30% { opacity: 0; } 40%, 70% { opacity: 1; } 80%, 100% { opacity: 0; } }
+.q-viz { margin: 4px 0 12px; }
+.waffle { width: 108px; height: 108px; display: block; }
+.waffle .w-on { animation: w-in 0.5s ease both; }
+@keyframes w-in { from { opacity: 0; } to { opacity: 1; } }
+.onein { height: 44px; display: block; }
+.minibars { display: grid; gap: 6px; font-size: 12px; }
+.mb-row { display: grid; grid-template-columns: minmax(0, 1fr) 70px auto; gap: 8px; align-items: center; }
+.mb-name { color: rgba(240, 235, 221, 0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mb-track { height: 8px; background: rgba(139, 154, 167, 0.16); border-radius: 0 4px 4px 0; overflow: hidden; }
+.mb-track i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+[dir="rtl"] .mb-track, [dir="rtl"] .mb-track i { border-radius: 4px 0 0 4px; }
+[dir="rtl"] .mb-track { direction: rtl; }
+.mb-val { color: var(--ivory); font-size: 11px; }
+.how-icon { width: 80px; height: 60px; display: block; margin-bottom: 8px; }
+.how-icon.pull .s2 { animation: h-pull2 3.2s ease-in-out infinite; }
+.how-icon.pull .s3 { animation: h-pull3 3.2s ease-in-out infinite; }
+.how-icon.stack .s2 { animation: h-stack2 3.2s ease-in-out infinite; }
+.how-icon.stack .s3 { animation: h-stack3 3.2s ease-in-out infinite; }
+@keyframes h-pull2 { 0%, 20% { transform: translateY(8px); } 50%, 80% { transform: translateY(-2px); } 100% { transform: translateY(8px); } }
+@keyframes h-pull3 { 0%, 20% { transform: translateY(16px); } 50%, 80% { transform: translateY(-6px); } 100% { transform: translateY(16px); } }
+@keyframes h-stack2 { 0%, 20% { transform: translateY(-2px); } 50%, 80% { transform: translateY(8px); } 100% { transform: translateY(-2px); } }
+@keyframes h-stack3 { 0%, 20% { transform: translateY(-6px); } 50%, 80% { transform: translateY(16px); } 100% { transform: translateY(-6px); } }
+.how-icon .cursor { animation: h-click 2.4s ease infinite; transform-origin: 52px 18px; }
+.how-icon .hex-pulse { animation: h-hex 2.4s ease infinite; }
+@keyframes h-click { 0%, 40% { transform: translate(8px, -6px); } 55% { transform: translate(0, 0) scale(0.9); } 65%, 100% { transform: translate(0, 0); } }
+@keyframes h-hex { 0%, 50% { opacity: 0.2; } 60%, 90% { opacity: 1; } 100% { opacity: 0.2; } }
+@media (max-width: 760px) { .story-grid { grid-template-columns: 1fr; } .stack-art { max-width: 320px; margin: 0 auto; } }
+
+/* SVG labels: anchor to the right of each sheet in both languages */
+.stack-art { direction: ltr; }
+.stack-art text { direction: ltr; unicode-bidi: plaintext; }

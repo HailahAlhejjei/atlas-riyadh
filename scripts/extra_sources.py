@@ -25,6 +25,9 @@ OVERTURE_MAP = {
 }
 OVERTURE_GREEN = {"park", "botanical_garden", "public_plaza", "playground", "national_park", "water_park"}
 OVERTURE_TRAIL = {"hiking_trail"}
+import re
+MEDICAL = re.compile(r"hospital|medical|clinic|health|care|dental|polyclinic|surgery|مستشفى|مستشفي|طبي|عيادة|عيادات|صحي|مجمع|مركز|رعاية|علاج", re.I)
+NOT_MEDICAL = re.compile(r"trading|\bco\.?\b|company|est\.|establishment|contracting|store|shop|pharma|supply|شركة|مؤسسة|تجارة|مقاولات|متجر|صيدلية", re.I)
 SAME_KIND = {"school": "school", "kindergarten": "school", "university": "uni", "college": "uni", "hospital": "health", "clinic": "health"}
 
 
@@ -55,6 +58,10 @@ def merge_facilities(osm_pts, overture, proj, inside):
         m = OVERTURE_MAP.get(o["cat"])
         if not m:
             continue
+        if m[1] == "health":
+            nm = f"{o['name'] or ''} {o['name_ar'] or ''}"
+            if not MEDICAL.search(nm) or NOT_MEDICAL.search(nm):
+                continue
         x, y = proj(o["lon"], o["lat"])
         if not inside(x, y):
             continue
