@@ -424,3 +424,6 @@ html[lang="ar"] .stack-label { font-family: "IBM Plex Sans Arabic", var(--body);
 /* SVG labels: anchor to the right of each sheet in both languages */
 .stack-art { direction: ltr; }
 .stack-art text { direction: ltr; unicode-bidi: plaintext; }
+
+.fac-metro i { color: var(--cyan); font-size: 12px; }
+.fac-metro { border-color: rgba(91, 217, 232, 0.35); }

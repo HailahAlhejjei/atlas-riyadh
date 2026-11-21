@@ -505,6 +505,8 @@ def main():
     if _ms:
         stations = [{"name": m["name"], "name_ar": m["name_ar"], "x": m["x"], "y": m["y"]} for m in _ms]
     print(f"  metro stations: {len(stations)}")
+    buses = XS.bus_stops(RAW, proj, lambda x, y: STUDY.contains(Point(x, y)))
+    print(f"  bus stops: {len(buses)}")
     print("green…")
     green, d_gr = build_green()
     print("facilities…")
@@ -719,6 +721,7 @@ def main():
         "roads": [{"cls": r["cls"], "name": r["name"], "l": line_out(r["geom"])} for r in roads],
         "metro": [{"name": m["name"], "l": line_out(m["geom"])} for m in metro],
         "stations": [{"name": s["name"], "name_ar": s.get("name_ar"), "x": int(s["x"]), "y": int(s["y"])} for s in stations],
+        "bus": [{"name": b["name"], "name_ar": b["name_ar"], "st": 1 if b["station"] else 0, "x": int(b["x"]), "y": int(b["y"])} for b in buses],
     })
     dump("green", {"items": [{"kind": g["kind"], "name": g["name"], "area": round(g["area"]), "p": poly_out(g["geom"])} for g in green],
                   "points": [{"kind": p["kind"], "name": p["name"], "name_ar": p["name_ar"], "x": int(p["x"]), "y": int(p["y"])} for p in green_pts],
@@ -770,9 +773,10 @@ def main():
             },
             "transport": {
                 "title": "Transportation", "source": "osm", "date": d_tr,
-                "represents": "Major road network (motorway → tertiary) and the Riyadh Metro lines and stations.",
+                "represents": "Major road network (motorway → tertiary), the Riyadh Metro lines and stations, and bus stops.",
                 "measure": "line length (km)", "count": len(roads) + len(metro),
                 "stations": len(stations),
+                "bus_stops": len(buses),
                 "totals_km": {k: round(v, 1) for k, v in road_total.items()},
                 "limitations": [
                     "Residential and service streets are excluded to keep the layer legible.",

@@ -138,3 +138,29 @@ def walkways(raw: pathlib.Path, way_line, clip):
         t = e.get("tags", {})
         out.append({"name": t.get("name:en") or t.get("name"), "name_ar": t.get("name:ar") or t.get("name"), "kind": t.get("highway") or t.get("leisure"), "geom": g.simplify(2)})
     return out
+
+
+def bus_stops(raw: pathlib.Path, proj, inside):
+    """Every bus stop / platform / station in OSM, merged when within 30 m (one stop, several nodes)."""
+    f = raw / "osm_bus_city.json"
+    if not f.exists():
+        return []
+    out = []
+    grid = {}
+    for e in json.loads(f.read_text(encoding="utf-8"))["elements"]:
+        c = e.get("center") or ({"lat": e["lat"], "lon": e["lon"]} if "lat" in e else None)
+        if not c:
+            continue
+        x, y = proj(c["lon"], c["lat"])
+        if not inside(x, y):
+            continue
+        k = (int(x // 60), int(y // 60))
+        near = [p for dx in (-1, 0, 1) for dy in (-1, 0, 1) for p in grid.get((k[0] + dx, k[1] + dy), [])]
+        if any(math.hypot(p["x"] - x, p["y"] - y) < 30 for p in near):
+            continue
+        t = e.get("tags", {})
+        rec = {"name": t.get("name:en") or t.get("name"), "name_ar": t.get("name:ar") or t.get("name"),
+               "station": t.get("amenity") == "bus_station", "x": x, "y": y}
+        out.append(rec)
+        grid.setdefault(k, []).append(rec)
+    return out

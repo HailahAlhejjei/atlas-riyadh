@@ -13,7 +13,7 @@ import { BuildingTiles } from "./BuildingTiles";
 import { Landmarks } from "./Landmarks";
 import { Strata } from "./Strata";
 import { FootprintMap } from "./FootprintMap";
-import { FacilityLabels } from "./FacilityLabels";
+import { FacilityLabels, StationLabels } from "./FacilityLabels";
 import { ShadowRig } from "./ShadowRig";
 import { DEFAULT_CITY } from "../config/cities";
 
@@ -67,7 +67,7 @@ export function CityScene({ data, compact }: { data: Partial<CityData>; compact:
       </LayerGroup>
       <LayerGroup id="green">{data.green && <GreenLayer items={data.green.items} points={data.green.points ?? []} walkways={data.green.walkways ?? []} />}</LayerGroup>
       <LayerGroup id="transport">
-        {data.transport && <TransportLayer roads={data.transport.roads} metro={data.transport.metro} stations={data.transport.stations} />}
+        {data.transport && <TransportLayer roads={data.transport.roads} metro={data.transport.metro} stations={data.transport.stations} bus={data.transport.bus ?? []} />}
       </LayerGroup>
       <LayerGroup id="facilities">{data.facilities && <FacilitiesLayer items={data.facilities.items} />}</LayerGroup>
       <LayerGroup id="population">{data.population && <PopulationLayer cells={data.population.cells} lens={lens} />}</LayerGroup>
@@ -76,6 +76,7 @@ export function CityScene({ data, compact }: { data: Partial<CityData>; compact:
       <Measure meta={meta} />
       <Strata meta={meta} />
       {data.facilities && <FacilityLabels items={data.facilities.items} />}
+      {data.transport && <StationLabels stations={data.transport.stations} />}
     </Canvas>
   );
 }

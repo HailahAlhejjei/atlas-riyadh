@@ -65,6 +65,7 @@ export type RoadClass = "motorway" | "trunk" | "primary" | "secondary" | "tertia
 export interface Road { cls: RoadClass; name: string | null; l: Ring[] }
 export interface MetroLine { name: string | null; l: Ring[] }
 export interface Station { name: string | null; name_ar?: string | null; x: number; y: number }
+export interface BusStop { name: string | null; name_ar?: string | null; st: 0 | 1; x: number; y: number }
 
 export interface GreenItem { kind: string; name: string | null; area: number; p: PolygonRings[] }
 export interface GreenPoint { kind: string; name: string | null; name_ar?: string | null; x: number; y: number }
@@ -121,7 +122,7 @@ export interface Insight {
 export interface CityData {
   meta: CityMeta;
   population?: { cells: PopCell[] };
-  transport?: { roads: Road[]; metro: MetroLine[]; stations: Station[] };
+  transport?: { roads: Road[]; metro: MetroLine[]; stations: Station[]; bus?: BusStop[] };
   green?: { items: GreenItem[]; points?: GreenPoint[]; walkways?: Walkway[] };
   facilities?: { items: Facility[] };
   buildings?: { items: Building[]; landmarks?: Landmark[]; tile_size?: number; tiles?: BuildingTileRef[] };

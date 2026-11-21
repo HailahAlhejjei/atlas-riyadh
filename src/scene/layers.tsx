@@ -7,14 +7,15 @@ import { useFrame } from "@react-three/fiber";
 import { scaleLinear } from "d3-scale";
 import { quantile } from "d3-array";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Object3D, type Group, type MeshStandardMaterial } from "three";
-import { C, FAC_COLOR, POP_HEIGHT_PER_DENSITY, ROAD_WIDTH } from "../config/theme";
+import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Object3D } from "three";
+import { C, FAC_COLOR, ROAD_WIDTH } from "../config/theme";
 import { fmtInt } from "../data/geo";
-import type { GreenPoint, Walkway, Building, District, Landmark, Facility, GreenItem, MetroLine, PopCell, Road, Station } from "../data/schema";
+import type { BusStop, GreenPoint, Walkway, Building, District, Landmark, Facility, GreenItem, MetroLine, PopCell, Road, Station } from "../data/schema";
 import { paint, useGeometry } from "../geometry/useGeometry";
 import type { GeoJob } from "../geometry/geometry.worker";
 import { getState, setState, useStore, type Lens } from "../store";
 import { hoverHandlers } from "./pointer";
+import { GlowDots } from "./GlowDots";
 import { MODELED } from "./Landmarks";
 
 const rgb = (hex: string): [number, number, number] => {
@@ -223,7 +224,20 @@ export const kindLabel = (k: string) =>
   ({ park: "Park", garden: "Garden", trail: "Walking trail", public_plaza: "Public plaza", playground: "Playground", botanical_garden: "Botanical garden", national_park: "National park", water_park: "Water park", recreation_ground: "Recreation ground", grass: "Grass / verge", forest: "Planted trees", village_green: "Green" })[k] ?? k;
 
 /* ───────────────────────────── Transport */
-export function TransportLayer({ roads, metro, stations }: { roads: Road[]; metro: MetroLine[]; stations: Station[] }) {
+export function TransportLayer({ roads, metro, stations, bus }: { roads: Road[]; metro: MetroLine[]; stations: Station[]; bus: BusStop[] }) {
+  // stops as glowing dots: bus = small ivory, metro = large cyan
+  const busDots = useMemo(() => {
+    const p = new Float32Array(bus.length * 3), c = new Float32Array(bus.length * 3);
+    const a = new Color(C.ivory), b = new Color(C.sand);
+    bus.forEach((s, i) => { p.set([s.x, 14, -s.y], i * 3); const k = s.st ? b : a; c.set([k.r, k.g, k.b], i * 3); });
+    return { p, c };
+  }, [bus]);
+  const metroDots = useMemo(() => {
+    const p = new Float32Array(stations.length * 3), c = new Float32Array(stations.length * 3);
+    const k = new Color(C.cyan);
+    stations.forEach((s, i) => { p.set([s.x, 40, -s.y], i * 3); c.set([k.r, k.g, k.b], i * 3); });
+    return { p, c };
+  }, [stations]);
   const roadJob = useMemo<GeoJob>(
     () => ({ op: "ribbons", items: roads.map((r) => ({ lines: r.l, w: ROAD_WIDTH[r.cls], y: 1.5 + (r.cls === "motorway" ? 0.6 : 0) })) }),
     [roads],
@@ -272,6 +286,8 @@ export function TransportLayer({ roads, metro, stations }: { roads: Road[]; metr
         </mesh>
       )}
       <Stations items={stations} />
+      {bus.length > 0 && <GlowDots positions={busDots.p} colors={busDots.c} size={34} minPx={2.6} />}
+      {stations.length > 0 && <GlowDots positions={metroDots.p} colors={metroDots.c} size={150} minPx={7} twinkle={0.4} />}
     </group>
   );
 }
@@ -358,56 +374,107 @@ export function usePopScale(cells: PopCell[]) {
   }, [cells]);
 }
 
+/** Residents per glowing dot in the population layer. */
+export const PEOPLE_PER_DOT = 250;
+
+function rng(seed: number) {
+  // mulberry32: deterministic, so the dots never jump between renders
+  return () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function inRing(r: number[], x: number, y: number) {
+  let inside = false;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
+    const xi = r[i], yi = r[i + 1], xj = r[j], yj = r[j + 1];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * Population as a dot-density map: each neon dot is PEOPLE_PER_DOT residents,
+ * scattered at random inside its Kontur hexagon. Brighter, warmer clusters =
+ * more people. An invisible hexagon mesh underneath keeps hover and click.
+ */
 export function PopulationLayer({ cells, lens }: { cells: PopCell[]; lens: Lens }) {
-  const job = useMemo<GeoJob>(
-    () => ({ op: "extrude", items: cells.map((c) => ({ rings: [shrink(c.r, 0.93)], h: Math.max(4, c.density * POP_HEIGHT_PER_DENSITY) })) }),
-    [cells],
-  );
-  const pg = useGeometry(job);
-  const scale = usePopScale(cells);
   const sel = useStore((s) => (s.selection?.kind === "cell" ? s.selection.index : -1));
-  useLayoutEffect(() => {
-    if (!pg) return;
-    paint(pg, (id) => {
-      const c = cells[id];
-      if (id === sel) return rgb(C.cyan);
-      if (lens === "park") return c.d_park != null && c.d_park <= 500 ? rgb(C.green) : mix(C.grey, C.navy, 0.55);
-      if (lens === "metro") return c.d_metro != null && c.d_metro <= 800 ? rgb(C.cyan) : mix(C.grey, C.navy, 0.55);
-      if (lens === "school") return c.d_school != null && c.d_school <= 1000 ? rgb(C.ivory) : mix(C.grey, C.navy, 0.55);
-      if (lens === "health") return c.d_health != null && c.d_health <= 2000 ? rgb(C.amber) : mix(C.grey, C.navy, 0.55);
-      return rgb(scale(c.density));
+  const dots = useMemo(() => {
+    const pos: number[] = [];
+    const owner: number[] = [];
+    cells.forEach((c, ci) => {
+      const n = Math.round(c.pop / PEOPLE_PER_DOT);
+      if (!n) return;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i < c.r.length; i += 2) { x0 = Math.min(x0, c.r[i]); x1 = Math.max(x1, c.r[i]); y0 = Math.min(y0, c.r[i + 1]); y1 = Math.max(y1, c.r[i + 1]); }
+      const rand = rng(ci * 7919 + 17);
+      let placed = 0, tries = 0;
+      while (placed < n && tries < n * 30) {
+        tries++;
+        const x = x0 + rand() * (x1 - x0), y = y0 + rand() * (y1 - y0);
+        if (!inRing(c.r, x, y)) continue;
+        pos.push(x, 16 + rand() * 22, -y);
+        owner.push(ci);
+        placed++;
+      }
     });
-  }, [pg, cells, lens, scale, sel]);
+    return { positions: new Float32Array(pos), owner };
+  }, [cells]);
 
-  // gentle "breathing" reveal when first built
-  const mat = useRef<MeshStandardMaterial>(null);
-  const born = useRef(0);
-  useEffect(() => {
-    born.current = performance.now();
-  }, [pg]);
-  const grp = useRef<Group>(null);
-  useFrame(() => {
-    if (!grp.current) return;
-    const t = Math.min(1, (performance.now() - born.current) / 1400);
-    grp.current.scale.y = 0.02 + 0.98 * (1 - Math.pow(1 - t, 3));
-  });
+  const colors = useMemo(() => {
+    const d = cells.map((c) => c.density).sort((a, b) => a - b);
+    const q = [0, 0.35, 0.7, 0.93].map((p) => quantile(d, p) ?? 0);
+    const neon = scaleLinear<string>().domain(q).range(["#2E7FA8", "#5BD9E8", "#F0EBDD", "#FF9F5A"]).clamp(true);
+    const dim = new Color("#2A3644");
+    const lensColor = (c: PopCell): Color => {
+      const hit = (on: boolean, col: string) => (on ? new Color(col) : dim);
+      if (lens === "park") return hit(c.d_park != null && c.d_park <= 500, C.green);
+      if (lens === "metro") return hit(c.d_metro != null && c.d_metro <= 800, C.cyan);
+      if (lens === "school") return hit(c.d_school != null && c.d_school <= 1000, C.ivory);
+      if (lens === "health") return hit(c.d_health != null && c.d_health <= 2000, C.amber);
+      return new Color(neon(c.density));
+    };
+    const perCell = cells.map((c, i) => (i === sel ? new Color("#FFFFFF") : lensColor(c)));
+    const out = new Float32Array(dots.owner.length * 3);
+    dots.owner.forEach((ci, k) => {
+      const col = perCell[ci];
+      out[k * 3] = col.r; out[k * 3 + 1] = col.g; out[k * 3 + 2] = col.b;
+    });
+    return out;
+  }, [cells, dots, lens, sel]);
 
+  // flat, invisible hexagons for picking
+  const job = useMemo<GeoJob>(() => ({ op: "flat", items: cells.map((c) => ({ polys: [[c.r]] })), y: 20 }), [cells]);
+  const pg = useGeometry(job);
   const h = useMemo(
     () =>
       hoverHandlers((e) => {
         if (!pg || e.faceIndex == null) return null;
         const id = pg.triIds[e.faceIndex];
         const c = cells[id];
-        return c ? { label: `${fmtInt(c.density)} people/km²`, sub: `Hexagon ${c.h3} · ${fmtInt(c.pop)} residents in view`, select: { kind: "cell", index: id } } : null;
+        const ar = getState().lang === "ar";
+        return c
+          ? {
+              label: ar ? `${fmtInt(c.density)} نسمة/كم²` : `${fmtInt(c.density)} people/km²`,
+              sub: ar ? `${fmtInt(c.pop)} نسمة · كل نقطة = ${PEOPLE_PER_DOT} نسمة` : `${fmtInt(c.pop)} residents · 1 dot = ${PEOPLE_PER_DOT} people`,
+              select: { kind: "cell", index: id },
+            }
+          : null;
       }),
     [pg, cells],
   );
-  if (!pg) return null;
+
   return (
-    <group ref={grp}>
-      <mesh geometry={pg.geometry} castShadow receiveShadow {...h}>
-        <meshStandardMaterial ref={mat} vertexColors roughness={0.7} />
-      </mesh>
+    <group>
+      {pg && (
+        <mesh geometry={pg.geometry} {...h}>
+          <meshBasicMaterial colorWrite={false} depthWrite={false} transparent opacity={0} />
+        </mesh>
+      )}
+      {dots.positions.length > 0 && <GlowDots positions={dots.positions} colors={colors} size={46} twinkle={0.6} />}
     </group>
   );
 }
@@ -422,10 +489,3 @@ function spread(ls: Landmark[], max: number) {
   return out;
 }
 
-function shrink(r: number[], k: number) {
-  let cx = 0, cy = 0;
-  const n = r.length / 2;
-  for (let i = 0; i < r.length; i += 2) { cx += r[i]; cy += r[i + 1]; }
-  cx /= n; cy /= n;
-  return r.map((v, i) => (i % 2 ? cy + (v - cy) * k : cx + (v - cx) * k));
-}

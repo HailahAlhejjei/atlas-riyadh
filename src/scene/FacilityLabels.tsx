@@ -3,7 +3,7 @@ import type { CameraControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import { Vector3, type Group } from "three";
-import type { Facility } from "../data/schema";
+import type { Facility, Station } from "../data/schema";
 import { getState, isShown, setState } from "../store";
 import { layerY } from "./LayerGroup";
 
@@ -89,6 +89,64 @@ export function FacilityLabels({ items }: { items: Facility[] }) {
             >
               <i aria-hidden>{k.icon}</i>
               <span>{(ar && f.name_ar) || f.name || f.name_ar}</span>
+            </button>
+          </Html>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Metro station names, decluttered the same way, when Transportation is on. */
+export function StationLabels({ stations }: { stations: Station[] }) {
+  const controls = useThree((st) => st.controls) as unknown as CameraControls | null;
+  const size = useThree((st) => st.size);
+  const t = useMemo(() => new Vector3(), []);
+  const v = useMemo(() => new Vector3(), []);
+  const [show, setShow] = useState<number[]>([]);
+  const last = useRef(0);
+  const grp = useRef<Group>(null);
+  useFrame(({ camera, clock }) => {
+    if (grp.current) grp.current.position.y = layerY.transport;
+    if (clock.elapsedTime - last.current < 0.25) return;
+    last.current = clock.elapsedTime;
+    const s = getState();
+    if (s.phase !== "explore" || !isShown(s, "transport")) {
+      if (show.length) setShow([]);
+      return;
+    }
+    if (controls?.getTarget) controls.getTarget(t);
+    const dist = camera.position.distanceTo(t);
+    const R = Math.max(3000, Math.min(26000, dist * 0.6));
+    const ar = s.lang === "ar";
+    const cand = stations.map((st, i) => ({ st, i, d: Math.hypot(st.x - t.x, st.y + t.z) })).filter((o) => o.d < R && (o.st.name || o.st.name_ar)).sort((a, b) => a.d - b.d);
+    const placed: [number, number, number, number][] = [];
+    const out: number[] = [];
+    for (const o of cand) {
+      v.set(o.st.x, (grp.current?.position.y ?? 0) + 60, -o.st.y).project(camera);
+      if (v.z > 1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05) continue;
+      const sx = ((v.x + 1) / 2) * size.width, sy = ((1 - v.y) / 2) * size.height;
+      const name = (ar && o.st.name_ar) || o.st.name || "";
+      const w = Math.min(240, 30 + name.length * 7.2);
+      const box: [number, number, number, number] = [sx - w / 2, sy - ROW_H, sx + w / 2, sy];
+      if (placed.some((p) => box[0] < p[2] && box[2] > p[0] && box[1] < p[3] && box[3] > p[1])) continue;
+      placed.push(box);
+      out.push(o.i);
+      if (out.length >= 18) break;
+    }
+    out.sort((a, b) => a - b);
+    if (out.join() !== show.join()) setShow(out);
+  });
+  const ar = getState().lang === "ar";
+  return (
+    <group ref={grp}>
+      {show.map((i) => {
+        const st = stations[i];
+        return (
+          <Html key={i} position={[st.x, 60, -st.y]} zIndexRange={[7, 0]}>
+            <button className="fac-tag fac-metro" onClick={() => setState({ selection: { kind: "station", index: i }, panelsOpen: true })}>
+              <i aria-hidden>Ⓜ</i>
+              <span>{(ar && st.name_ar) || st.name || st.name_ar}</span>
             </button>
           </Html>
         );
