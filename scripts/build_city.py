@@ -526,6 +526,10 @@ def main():
         c["pop"] = c["pop_full"] * c["frac"]
         c["density"] = c["pop_full"] / (c["geom"].area / 1e6)
     total_pop = sum(c["pop"] for c in cells)
+    shares, city_groups = XS.agesex_shares(RAW, cells, proj)
+    for c, sh in zip(cells, shares):
+        c["groups"] = sh
+    print(f"  age/sex shares: {sum(1 for s in shares if s)} of {len(cells)} hexagons · city {city_groups}")
 
     parks = [g for g in green if g["kind"] in PUBLIC_GREEN and g["area"] >= 5000]
     # Overture parks are points with no outline: count them as parks (40 m disc) when confidence >= 0.6
@@ -715,6 +719,7 @@ def main():
          "d_metro": None if c["d_metro"] is None else round(c["d_metro"]),
          "d_school": None if c["d_school"] is None else round(c["d_school"]),
          "d_health": None if c["d_health"] is None else round(c["d_health"]),
+         "g": c.get("groups"),
          "r": flat(c["clip"].exterior.coords[:-1]) if isinstance(c["clip"], Polygon) else flat(max(c["clip"].geoms, key=lambda q: q.area).exterior.coords[:-1])}
         for c in cells if c["pop"] > 0.5]})
     dump("transport", {
@@ -756,6 +761,8 @@ def main():
                      "url": "https://github.com/microsoft/GlobalMLBuildingFootprints", "date": "2026-02-03"},
             "overture": {"name": "Overture Maps Places", "license": "CDLA-Permissive-2.0",
                          "url": "https://overturemaps.org", "date": "2026-11-18"},
+            "worldpop": {"name": "WorldPop age and sex structures 2020", "license": "CC BY 4.0",
+                         "url": "https://hub.worldpop.org/project/categories?id=8", "date": "2020"},
             "kontur": {"name": "Kontur Population: Saudi Arabia", "license": "CC BY 4.0",
                        "url": "https://data.humdata.org/dataset/kontur-population-saudi-arabia", "date": CFG["population_date"]},
         },
@@ -765,9 +772,11 @@ def main():
                 "represents": "Estimated residents per H3 hexagon (resolution 8, ~0.74 km²).",
                 "measure": "people per hexagon; density = people/km²",
                 "count": sum(1 for c in cells if c["pop"] > 0.5), "total": round(total_pop),
+                "groups": city_groups, "groups_source": "WorldPop 2020 age/sex structures (100 m, constrained), CC BY 4.0",
                 "limitations": [
                     "Modelled estimate, not a census count: Kontur combines GHSL, Facebook HRSL, Microsoft buildings and OSM.",
                     "Residents only — daytime workers and visitors in office districts are not counted.",
+                    "Women/men and under/over 50 are each hexagon's shares from WorldPop 2020, applied to the Kontur 2023 total. WorldPop spreads census age/sex profiles over buildings, so local differences are approximate.",
                     "Hexagons crossing the city edge are clipped; their population is scaled by area kept.",
                 ],
             },

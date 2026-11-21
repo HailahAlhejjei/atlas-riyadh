@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useT, type Key } from "../i18n";
 import { lazy, Suspense, useState } from "react";
-import { C, LAYER_COLOR, LAYER_ORDER } from "../config/theme";
+import { C, GROUPS, LAYER_COLOR, LAYER_ORDER } from "../config/theme";
 import { fmtCoord } from "../data/geo";
 import type { DataKey, LayerId } from "../data/schema";
 import type { CityDataState } from "../data/useCityData";
@@ -146,6 +146,7 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
                   {solo === id ? t("all") : t("only")}
                 </button>
               </div>
+              {id === "population" && <PeopleKey meta={meta} />}
               {more && (
                 <input
                   type="range" min={0.05} max={1} step={0.01} value={layers[id].opacity} aria-label={`${lm.title} opacity`}
@@ -193,6 +194,25 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
       </div>
       </>)}
     </motion.aside>
+  );
+}
+
+function PeopleKey({ meta }: { meta: CityDataState["data"]["meta"] }) {
+  const lens = useStore((s) => s.lens);
+  const ar = useStore((s) => s.lang) === "ar";
+  const shares = (meta?.layers.population.groups as number[] | undefined) ?? null;
+  if (lens !== "none") return null;
+  return (
+    <ul className="people-key" aria-label={ar ? "ألوان السكان" : "Population colours"}>
+      {GROUPS.map((g, i) => (
+        <li key={g.key}>
+          <i style={{ background: g.color, boxShadow: `0 0 8px ${g.color}` }} />
+          <span>{ar ? g.ar : g.en}</span>
+          {shares && <b className="mono">{Math.round(shares[i] * 100)}%</b>}
+        </li>
+      ))}
+      <li className="pk-note mono">{ar ? "كل نقطة = 250 نسمة" : "1 dot = 250 people"}</li>
+    </ul>
   );
 }
 

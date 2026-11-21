@@ -21,21 +21,22 @@ const vert = /* glsl */ `
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     float tw = 1.0 + uTwinkle * 0.35 * sin(uTime * 1.6 + seed * 6.2831);
     gl_PointSize = clamp(uSize * uScale / -mv.z, uMinPx, 40.0) * tw;
-    vFade = clamp(uSize * uScale / -mv.z / 2.5, 0.75, 1.0); // far dots dimmer so the city doesn't white out
+    vFade = clamp(uSize * uScale / -mv.z / 2.5, 0.9, 1.0); // far dots dimmer so the city doesn't white out
     gl_Position = projectionMatrix * mv;
   }`;
 
 const frag = /* glsl */ `
   uniform float uOpacity;
+  uniform float uGain;
   varying vec3 vColor;
   varying float vFade;
   void main() {
     float d = length(gl_PointCoord - 0.5);
     if (d > 0.5) discard;
-    float core = smoothstep(0.22, 0.0, d);
-    float halo = smoothstep(0.5, 0.0, d) * 0.55;
-    float a = (core + halo) * uOpacity * vFade;
-    gl_FragColor = vec4(vColor * (0.65 + core * 0.9), a);
+    float core = smoothstep(0.24, 0.0, d);
+    float halo = pow(smoothstep(0.5, 0.0, d), 1.6) * 0.75;
+    float a = clamp((core + halo) * uOpacity * vFade * uGain, 0.0, 1.0);
+    gl_FragColor = vec4(vColor * (0.8 + core * 1.1) * uGain, a);
   }`;
 
 export interface GlowDotsProps {
@@ -46,9 +47,11 @@ export interface GlowDotsProps {
   opacity?: number;
   /** smallest on-screen size in px, so the overview never fades out */
   minPx?: number;
+  /** brightness multiplier */
+  gain?: number;
 }
 
-export function GlowDots({ positions, colors, size, twinkle = 0, opacity = 1, minPx = 3.2 }: GlowDotsProps) {
+export function GlowDots({ positions, colors, size, twinkle = 0, opacity = 1, minPx = 3.2, gain = 1 }: GlowDotsProps) {
   const { size: vp, camera } = useThree();
   const geo = useMemo(() => {
     const g = new BufferGeometry();
@@ -70,7 +73,7 @@ export function GlowDots({ positions, colors, size, twinkle = 0, opacity = 1, mi
         transparent: true,
         depthWrite: false,
         blending: AdditiveBlending,
-        uniforms: { uSize: { value: size }, uScale: { value: 400 }, uTime: { value: 0 }, uTwinkle: { value: twinkle }, uOpacity: { value: opacity }, uMinPx: { value: minPx } },
+        uniforms: { uSize: { value: size }, uScale: { value: 400 }, uTime: { value: 0 }, uTwinkle: { value: twinkle }, uOpacity: { value: opacity }, uMinPx: { value: minPx }, uGain: { value: gain } },
       }),
     [], // eslint-disable-line react-hooks/exhaustive-deps
   );

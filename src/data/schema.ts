@@ -58,6 +58,7 @@ export interface PopCell {
   d_metro: number | null; // m to nearest metro station
   d_school?: number | null; // m to nearest mapped school
   d_health?: number | null; // m to nearest hospital/clinic
+  g?: [number, number, number, number] | null; // shares: women<50, women 50+, men<50, men 50+
   r: Ring;
 }
 

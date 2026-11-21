@@ -164,3 +164,36 @@ def bus_stops(raw: pathlib.Path, proj, inside):
         out.append(rec)
         grid.setdefault(k, []).append(rec)
     return out
+
+
+GROUPS = ("f_u50", "f_50p", "m_u50", "m_50p")
+
+
+def agesex_shares(raw: pathlib.Path, cells, to_lonlat_inv):
+    """Returns ([fu, fo, mu, mo] per cell or None, city totals). Cells: dicts with shapely 'geom' in local metres."""
+    f = raw / "agesex.npz"
+    if not f.exists():
+        return [None] * len(cells), None
+    import numpy as np
+    import shapely
+    from shapely.strtree import STRtree
+
+    z = np.load(f)
+    a, b, c, d, e, ff = z["transform"]  # affine: x = a*col + b*row + c ; y = d*col + e*row + ff
+    total = sum(z[g] for g in GROUPS)
+    rows, cols = np.nonzero(total > 0)
+    lon = a * (cols + 0.5) + b * (rows + 0.5) + c
+    lat = d * (cols + 0.5) + e * (rows + 0.5) + ff
+    xy = np.array([to_lonlat_inv(lo, la) for lo, la in zip(lon, lat)])
+    pts = shapely.points(xy[:, 0], xy[:, 1])
+    tree = STRtree([c_["geom"] for c_ in cells])
+    pi, ci = tree.query(pts, predicate="within")
+    sums = np.zeros((len(cells), 4))
+    vals = np.stack([z[g][rows, cols] for g in GROUPS], axis=1)
+    np.add.at(sums, ci, vals[pi])
+    out = []
+    for s in sums:
+        t = s.sum()
+        out.append([round(float(v / t), 3) for v in s] if t > 5 else None)
+    city = vals[np.unique(pi)].sum(axis=0) if len(pi) else vals.sum(axis=0)
+    return out, [round(float(v / city.sum()), 3) for v in city]

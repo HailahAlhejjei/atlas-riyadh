@@ -8,7 +8,7 @@ import { scaleLinear } from "d3-scale";
 import { quantile } from "d3-array";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Object3D } from "three";
-import { C, FAC_COLOR, ROAD_WIDTH } from "../config/theme";
+import { C, FAC_COLOR, GROUPS, ROAD_WIDTH } from "../config/theme";
 import { fmtInt } from "../data/geo";
 import type { BusStop, GreenPoint, Walkway, Building, District, Landmark, Facility, GreenItem, MetroLine, PopCell, Road, Station } from "../data/schema";
 import { paint, useGeometry } from "../geometry/useGeometry";
@@ -405,6 +405,7 @@ export function PopulationLayer({ cells, lens }: { cells: PopCell[]; lens: Lens 
   const dots = useMemo(() => {
     const pos: number[] = [];
     const owner: number[] = [];
+    const grp: number[] = [];
     cells.forEach((c, ci) => {
       const n = Math.round(c.pop / PEOPLE_PER_DOT);
       if (!n) return;
@@ -418,10 +419,14 @@ export function PopulationLayer({ cells, lens }: { cells: PopCell[]; lens: Lens 
         if (!inRing(c.r, x, y)) continue;
         pos.push(x, 16 + rand() * 22, -y);
         owner.push(ci);
+        const g = c.g;
+        let pick = 0;
+        if (g) { let u = rand(), acc = 0; for (let k = 0; k < 4; k++) { acc += g[k]; if (u <= acc) { pick = k; break; } pick = k; } } else pick = rand() < 0.5 ? 0 : 2;
+        grp.push(pick);
         placed++;
       }
     });
-    return { positions: new Float32Array(pos), owner };
+    return { positions: new Float32Array(pos), owner, grp };
   }, [cells]);
 
   const colors = useMemo(() => {
@@ -437,10 +442,11 @@ export function PopulationLayer({ cells, lens }: { cells: PopCell[]; lens: Lens 
       if (lens === "health") return hit(c.d_health != null && c.d_health <= 2000, C.amber);
       return new Color(neon(c.density));
     };
-    const perCell = cells.map((c, i) => (i === sel ? new Color("#FFFFFF") : lensColor(c)));
+    const groupCol = GROUPS.map((g) => new Color(g.color));
+    const perCell = cells.map((c, i) => (i === sel ? new Color("#FFFFFF") : lens === "none" ? null : lensColor(c)));
     const out = new Float32Array(dots.owner.length * 3);
     dots.owner.forEach((ci, k) => {
-      const col = perCell[ci];
+      const col = perCell[ci] ?? groupCol[dots.grp[k]];
       out[k * 3] = col.r; out[k * 3 + 1] = col.g; out[k * 3 + 2] = col.b;
     });
     return out;
@@ -474,7 +480,7 @@ export function PopulationLayer({ cells, lens }: { cells: PopCell[]; lens: Lens 
           <meshBasicMaterial colorWrite={false} depthWrite={false} transparent opacity={0} />
         </mesh>
       )}
-      {dots.positions.length > 0 && <GlowDots positions={dots.positions} colors={colors} size={46} twinkle={0.6} />}
+      {dots.positions.length > 0 && <GlowDots positions={dots.positions} colors={colors} size={80} twinkle={0.45} minPx={6} gain={2.3} />}
     </group>
   );
 }
