@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useT } from "../i18n";
 import { useMemo } from "react";
 import { C, FAC_COLOR, FAC_LABEL, LAYER_COLOR } from "../config/theme";
 import { fmtCoord, fmtInt, fmtPct, makeProjection } from "../data/geo";
@@ -50,16 +51,19 @@ export function InfoPanel({ city, compact }: { city: CityDataState; compact: boo
 }
 
 function SourceLine({ meta, src, date }: { meta: CityMeta; src: SourceId; date?: string }) {
+  const t = useT();
   const s = meta.sources[src];
   return (
     <div className="source mono">
-      <span>SOURCE</span> <a href={s.url} target="_blank" rel="noreferrer">{s.name}</a> · {s.license}
+      <span>{t("source")}</span> <a href={s.url} target="_blank" rel="noreferrer">{s.name}</a> · {s.license}
       {date && <> · {date.slice(0, 10)}</>}
     </div>
   );
 }
 
 function DistrictView({ d, all, meta }: { d: District; all: District[]; meta: CityMeta }) {
+  const t = useT();
+  const ar = t("lang_switch") === "English";
   const s = d.stats;
   const valid = useMemo(() => all.filter((x) => x.stats.population > 1000 && x.stats.area_km2 > 0.4), [all]);
   const roads = Object.values(s.road_km).reduce((a, b) => a + (b ?? 0), 0);
@@ -67,38 +71,38 @@ function DistrictView({ d, all, meta }: { d: District; all: District[]; meta: Ci
   const [lon, lat] = proj.toLonLat(d.c[0], d.c[1]);
   return (
     <div className="info">
-      <p className="eyebrow mono">NEIGHBOURHOOD · {fmtCoord(lon, lat)}</p>
-      <h2>{d.name ?? "Unnamed neighbourhood"}</h2>
-      {d.name_ar && d.name_ar !== d.name && <p className="ar-name">{d.name_ar}</p>}
+      <p className="eyebrow mono">{t("neighbourhood")} · {fmtCoord(lon, lat)}</p>
+      <h2>{(ar ? d.name_ar : d.name) ?? d.name ?? t("unnamed")}</h2>
+      {d.name_ar && d.name && d.name_ar !== d.name && <p className="ar-name">{ar ? d.name : d.name_ar}</p>}
       <div className="kpis">
-        <div><b className="mono">{fmtInt(s.population)}</b><span>residents (est.)</span></div>
-        <div><b className="mono">{s.area_km2.toFixed(2)}</b><span>km²{d.clipped ? " in study area" : ""}</span></div>
-        <div><b className="mono">{fmtInt(s.density_km2)}</b><span>people / km²</span></div>
+        <div><b className="mono">{fmtInt(s.population)}</b><span>{t("residents_est")}</span></div>
+        <div><b className="mono">{s.area_km2.toFixed(2)}</b><span>{d.clipped ? t("km2_in_study") : t("km2")}</span></div>
+        <div><b className="mono">{fmtInt(s.density_km2)}</b><span>{t("per_km2")}</span></div>
       </div>
-      <button className="link" onClick={() => setState({ focus: { x: d.c[0], y: d.c[1], nonce: Date.now() } })}>Fly to neighbourhood →</button>
+      <button className="link" onClick={() => setState({ focus: { x: d.c[0], y: d.c[1], nonce: Date.now() } })}>{t("fly_to")}</button>
 
       <section>
-        <h3><i style={{ background: LAYER_COLOR.population }} />Population</h3>
-        <StripChart label="Density" value={s.density_km2} all={valid.map((x) => x.stats.density_km2 ?? 0)} fmt={(n) => `${fmtInt(n)}/km²`} color={C.amber} />
+        <h3><i style={{ background: LAYER_COLOR.population }} />{t("L_population")}</h3>
+        <StripChart label={t("density")} value={s.density_km2} all={valid.map((x) => x.stats.density_km2 ?? 0)} fmt={(n) => `${fmtInt(n)}/km²`} color={C.amber} />
       </section>
       <section>
-        <h3><i style={{ background: LAYER_COLOR.green }} />Green space</h3>
-        <StripChart label="Share of land mapped green" value={s.green_share} all={valid.map((x) => x.stats.green_share ?? 0)} fmt={(n) => fmtPct(n, 1)} color={C.green} />
-        <StripChart label="Park area per resident" value={s.park_m2_per_person} all={valid.map((x) => x.stats.park_m2_per_person ?? 0)} fmt={(n) => `${n.toFixed(1)} m²`} color={C.green} />
+        <h3><i style={{ background: LAYER_COLOR.green }} />{t("L_green")}</h3>
+        <StripChart label={t("green_share")} value={s.green_share} all={valid.map((x) => x.stats.green_share ?? 0)} fmt={(n) => fmtPct(n, 1)} color={C.green} />
+        <StripChart label={t("park_pp")} value={s.park_m2_per_person} all={valid.map((x) => x.stats.park_m2_per_person ?? 0)} fmt={(n) => `${n.toFixed(1)} m²`} color={C.green} />
         <p className="small muted">{fmtPct(s.pop_park_500m_share)} of residents live within 500 m (straight line) of a park ≥ 0.5 ha.</p>
       </section>
       <section>
-        <h3><i style={{ background: LAYER_COLOR.transport }} />Transportation</h3>
-        <StripChart label="Major-road density" value={s.road_km_per_km2} all={valid.map((x) => x.stats.road_km_per_km2 ?? 0)} fmt={(n) => `${n.toFixed(1)} km/km²`} />
+        <h3><i style={{ background: LAYER_COLOR.transport }} />{t("L_transport")}</h3>
+        <StripChart label={t("road_density")} value={s.road_km_per_km2} all={valid.map((x) => x.stats.road_km_per_km2 ?? 0)} fmt={(n) => `${n.toFixed(1)} km/km²`} />
         <p className="small muted">{roads.toFixed(1)} km of major road · {s.metro_stations} metro station{s.metro_stations === 1 ? "" : "s"} inside the boundary.</p>
       </section>
       <section>
-        <h3><i style={{ background: LAYER_COLOR.facilities }} />Public facilities</h3>
+        <h3><i style={{ background: LAYER_COLOR.facilities }} />{t("L_facilities")}</h3>
         <Breakdown parts={(Object.keys(FAC_LABEL) as FacilityCat[]).map((k) => ({ label: FAC_LABEL[k], value: s.facilities[k] ?? 0, color: FAC_COLOR[k] }))} />
       </section>
 
       <details className="method">
-        <summary>How these numbers are made</summary>
+        <summary>{t("how_made")}</summary>
         <ul>
           <li>Boundary: OpenStreetMap ({d.osm}). It approximates the neighbourhood and is not an official Amanah limit.{d.clipped && " This one is clipped at the study-area edge."}</li>
           <li>Residents: Kontur hexagon populations, split by overlapping area. Assumes even spread inside each ~0.74 km² hexagon.</li>
@@ -113,6 +117,7 @@ function DistrictView({ d, all, meta }: { d: District; all: District[]; meta: Ci
 }
 
 function CellView({ meta, cell, all }: { meta: CityMeta; cell: { h3: string; pop_full: number; density: number; d_park: number | null; d_metro: number | null; r: number[] }; all: number[] }) {
+  const t = useT();
   const proj = makeProjection(meta);
   const n = cell.r.length / 2;
   const cx = cell.r.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0) / n;
@@ -120,7 +125,7 @@ function CellView({ meta, cell, all }: { meta: CityMeta; cell: { h3: string; pop
   const [lon, lat] = proj.toLonLat(cx, cy);
   return (
     <div className="info">
-      <p className="eyebrow mono">POPULATION HEXAGON · H3 r8</p>
+      <p className="eyebrow mono">{t("hexagon")}</p>
       <h2 className="mono">{cell.h3}</h2>
       <p className="mono small muted">{fmtCoord(lon, lat)}</p>
       <div className="kpis">
@@ -144,6 +149,7 @@ function CellView({ meta, cell, all }: { meta: CityMeta; cell: { h3: string; pop
 }
 
 function PointView({ meta, title, kind, x, y, layer }: { meta: CityMeta; title: string; kind: string; x: number; y: number; layer: LayerId }) {
+  const t = useT();
   const [lon, lat] = makeProjection(meta).toLonLat(x, y);
   const lm = meta.layers[layer];
   return (
@@ -151,9 +157,9 @@ function PointView({ meta, title, kind, x, y, layer }: { meta: CityMeta; title: 
       <p className="eyebrow mono">{kind.toUpperCase()}</p>
       <h2>{title}</h2>
       <p className="mono small muted">{fmtCoord(lon, lat)}</p>
-      <button className="link" onClick={() => setState({ focus: { x, y, nonce: Date.now() } })}>Fly here →</button>
+      <button className="link" onClick={() => setState({ focus: { x, y, nonce: Date.now() } })}>{t("fly_here")}</button>
       <section>
-        <h3>About this layer</h3>
+        <h3>{t("about_layer")}</h3>
         <p className="small">{lm.represents}</p>
       </section>
       <LimitList lm={lm} />
@@ -163,6 +169,7 @@ function PointView({ meta, title, kind, x, y, layer }: { meta: CityMeta; title: 
 }
 
 function LayerView({ meta, id, city }: { meta: CityMeta; id: LayerId | "districts"; city: CityDataState }) {
+  const t = useT();
   const lm = meta.layers[id];
   const extra = (() => {
     if (id === "population" && city.data.population) {
@@ -226,7 +233,7 @@ function LayerView({ meta, id, city }: { meta: CityMeta; id: LayerId | "district
   })();
   return (
     <div className="info">
-      <p className="eyebrow mono">LAYER</p>
+      <p className="eyebrow mono">{t("layer")}</p>
       <h2>{lm.title}</h2>
       <p>{lm.represents}</p>
       {lm.measure && <p className="mono small muted">MEASURE · {lm.measure}</p>}
@@ -238,9 +245,10 @@ function LayerView({ meta, id, city }: { meta: CityMeta; id: LayerId | "district
 }
 
 function LimitList({ lm }: { lm: LayerMeta }) {
+  const t = useT();
   return (
     <section>
-      <h3>Known limitations</h3>
+      <h3>{t("limits")}</h3>
       <ul className="limits">{lm.limitations.map((l) => <li key={l}>{l}</li>)}</ul>
     </section>
   );

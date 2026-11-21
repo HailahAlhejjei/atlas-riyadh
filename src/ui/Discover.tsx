@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { INSIGHT_AR, useT } from "../i18n";
 import { useState } from "react";
 import { fmtInt, fmtPct } from "../data/geo";
 import type { Insight, LayerId } from "../data/schema";
@@ -7,11 +8,11 @@ import { setState, type Lens } from "../store";
 
 const ALL: LayerId[] = ["buildings", "green", "transport", "facilities", "population"];
 
-function apply(ins: Insight, city: CityDataState) {
+export function applyInsight(ins: Insight, city: CityDataState) {
   const layers = Object.fromEntries(
     ALL.map((id) => [id, { visible: id === "buildings" || ins.layers.includes(id), opacity: id === "population" ? 0.85 : 1 }]),
   ) as Record<LayerId, { visible: boolean; opacity: number }>;
-  const lens: Lens = ins.id === "park_access" ? "park" : ins.id === "metro_access" ? "metro" : "none";
+  const lens: Lens = ({ park_access: "park", metro_access: "metro", school_access: "school", health_access: "health" } as Record<string, Lens>)[ins.id] ?? "none";
   const ids = ins.answer?.map((a) => a.id) ?? [];
   const first = city.data.districts?.items.find((d) => d.id === ids[0]);
   setState({
@@ -29,7 +30,7 @@ function apply(ins: Insight, city: CityDataState) {
 function headline(ins: Insight) {
   if (ins.answer?.length) return `${ins.answer[0].name ?? "Unnamed"} — ${fmtInt(ins.answer[0].value)} ${ins.answer[0].unit}`;
   if (ins.value == null) return "Not enough data to answer.";
-  if (ins.unit === "share of population") return `${fmtPct(ins.value)} of residents`;
+  if (ins.unit === "share of population") return `${fmtPct(ins.value)} of residents` + (ins.per ? ` · ${fmtInt(ins.per)} ${ins.per_label}` : "");
   if (ins.id === "density_vs_green") {
     const v = ins.value;
     const word = Math.abs(v) < 0.2 ? "no clear relationship" : v < 0 ? "denser areas tend to have less green" : "denser areas tend to have more green";
@@ -40,13 +41,17 @@ function headline(ins: Insight) {
 
 export function Discover({ city }: { city: CityDataState }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
+  const ar = t("lang_switch") === "English";
   const [active, setActive] = useState<string | null>(null);
-  const items = city.data.insights?.items ?? [];
+  // same order as the story: people → schools & hospitals → roads & metro → green
+  const ORDER = ["density", "school_access", "health_access", "metro_access", "road_density", "park_access", "density_vs_green"];
+  const items = [...(city.data.insights?.items ?? [])].sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
 
   return (
     <div className={`discover ${open ? "open" : ""}`}>
       <button className="discover-btn" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="pulse" /> Discover something
+        <span className="pulse" /> {t("discover")}
       </button>
       <AnimatePresence>
         {open && (
@@ -54,8 +59,8 @@ export function Discover({ city }: { city: CityDataState }) {
             {city.status.insights === "error" && <p className="muted small">Findings could not be loaded.</p>}
             {items.map((ins) => (
               <div key={ins.id} className={`insight ${active === ins.id ? "on" : ""}`}>
-                <button className="q" onClick={() => { setActive(ins.id); apply(ins, city); }}>
-                  {ins.question}
+                <button className="q" onClick={() => { setActive(ins.id); applyInsight(ins, city); }}>
+                  {ar ? INSIGHT_AR[ins.id]?.q ?? ins.question : ins.question}
                 </button>
                 {active === ins.id && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="a">
@@ -72,14 +77,14 @@ export function Discover({ city }: { city: CityDataState }) {
                         ))}
                       </ol>
                     )}
-                    <p className="method small"><b>Method.</b> {ins.method}</p>
+                    <p className="method small"><b>{t("method")}</b> {ar ? INSIGHT_AR[ins.id]?.m ?? ins.method : ins.method}</p>
                   </motion.div>
                 )}
               </div>
             ))}
             {!!city.data.buildings?.landmarks?.length && (
               <>
-                <div className="discover-sec">LANDMARKS · FLY TO</div>
+                <div className="discover-sec">{t("landmarks_fly")}</div>
                 <div className="lm-list">
                   {city.data.buildings.landmarks.slice(0, 9).map((l) => (
                     <button key={l.name} onClick={() => setState((s) => ({

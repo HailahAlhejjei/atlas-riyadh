@@ -10,7 +10,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BufferGeometry, Color, Float32BufferAttribute, InstancedMesh, Object3D, type Group, type MeshStandardMaterial } from "three";
 import { C, FAC_COLOR, POP_HEIGHT_PER_DENSITY, ROAD_WIDTH } from "../config/theme";
 import { fmtInt } from "../data/geo";
-import type { Building, District, Landmark, Facility, GreenItem, MetroLine, PopCell, Road, Station } from "../data/schema";
+import type { GreenPoint, Walkway, Building, District, Landmark, Facility, GreenItem, MetroLine, PopCell, Road, Station } from "../data/schema";
 import { paint, useGeometry } from "../geometry/useGeometry";
 import type { GeoJob } from "../geometry/geometry.worker";
 import { getState, setState, useStore, type Lens } from "../store";
@@ -35,7 +35,7 @@ export function BuildingsLayer({ items, landmarks, lowDetail }: { items: Buildin
     if (!pg) return;
     paint(pg, (id) => {
       const b = src[id];
-      if (!b || b.s === "d") return mix(C.sand, C.navy2, 0.5);
+      if (!b || b.s === "d") return mix(C.sand, C.navy2, 0.42);
       return mix(C.sand, C.ivory, Math.min(1, b.h / 200));
     });
   }, [pg, src]);
@@ -133,7 +133,7 @@ export function DistrictsLayer({ items }: { items: District[] }) {
 }
 
 /* ───────────────────────────── Green spaces */
-export function GreenLayer({ items }: { items: GreenItem[] }) {
+export function GreenLayer({ items, points, walkways }: { items: GreenItem[]; points: GreenPoint[]; walkways: Walkway[] }) {
   const job = useMemo<GeoJob>(
     () => ({ op: "extrude", items: items.flatMap((g) => g.p.map((rings) => ({ rings, h: 3, base: 0.5 }))) }),
     [items],
@@ -161,15 +161,66 @@ export function GreenLayer({ items }: { items: GreenItem[] }) {
       }),
     [pg, items, owner],
   );
-  if (!pg) return null;
+  const walkJob = useMemo<GeoJob>(() => ({ op: "ribbons", items: walkways.map((w) => ({ lines: w.l, w: 7, y: 4.5 })) }), [walkways]);
+  const wg = useGeometry(walkJob);
+  useLayoutEffect(() => {
+    if (wg) paint(wg, () => rgb("#B9E4CC"));
+  }, [wg]);
+  const wh = useMemo(
+    () =>
+      hoverHandlers((e) => {
+        if (!wg || e.faceIndex == null) return null;
+        const w = walkways[wg.triIds[e.faceIndex]];
+        const ar = getState().lang === "ar";
+        return w ? { label: (ar ? w.name_ar : w.name) ?? w.name ?? (ar ? "ممشى" : "Walkway"), sub: ar ? "ممشى" : "Walkway", select: { kind: "layer", id: "green" } } : null;
+      }),
+    [wg, walkways],
+  );
+  const pref = useRef<InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = pref.current;
+    if (!m) return;
+    const o = new Object3D();
+    points.forEach((p, i) => {
+      o.position.set(p.x, 6, -p.y);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+    m.computeBoundingSphere();
+  }, [points]);
+  const ph = useMemo(
+    () =>
+      hoverHandlers((e) => {
+        const p = e.instanceId != null ? points[e.instanceId] : null;
+        const ar = getState().lang === "ar";
+        return p ? { label: (ar ? p.name_ar : p.name) ?? p.name ?? kindLabel(p.kind), sub: `${kindLabel(p.kind)} · Overture Maps`, select: { kind: "layer", id: "green" } } : null;
+      }),
+    [points],
+  );
   return (
-    <mesh geometry={pg.geometry} receiveShadow castShadow {...h}>
-      <meshStandardMaterial vertexColors roughness={0.9} />
-    </mesh>
+    <group>
+      {pg && (
+        <mesh geometry={pg.geometry} receiveShadow castShadow {...h}>
+          <meshStandardMaterial vertexColors roughness={0.9} />
+        </mesh>
+      )}
+      {wg && (
+        <mesh geometry={wg.geometry} {...wh}>
+          <meshStandardMaterial vertexColors roughness={0.7} emissive="#7CBA9B" emissiveIntensity={0.25} />
+        </mesh>
+      )}
+      {points.length > 0 && (
+        <instancedMesh ref={pref} args={[undefined, undefined, points.length]} {...ph}>
+          <cylinderGeometry args={[40, 40, 6, 18]} />
+          <meshStandardMaterial color={C.green} roughness={0.8} />
+        </instancedMesh>
+      )}
+    </group>
   );
 }
 export const kindLabel = (k: string) =>
-  ({ park: "Park", garden: "Garden", recreation_ground: "Recreation ground", grass: "Grass / verge", forest: "Planted trees", village_green: "Green" })[k] ?? k;
+  ({ park: "Park", garden: "Garden", trail: "Walking trail", public_plaza: "Public plaza", playground: "Playground", botanical_garden: "Botanical garden", national_park: "National park", water_park: "Water park", recreation_ground: "Recreation ground", grass: "Grass / verge", forest: "Planted trees", village_green: "Green" })[k] ?? k;
 
 /* ───────────────────────────── Transport */
 export function TransportLayer({ roads, metro, stations }: { roads: Road[]; metro: MetroLine[]; stations: Station[] }) {
@@ -322,6 +373,8 @@ export function PopulationLayer({ cells, lens }: { cells: PopCell[]; lens: Lens 
       if (id === sel) return rgb(C.cyan);
       if (lens === "park") return c.d_park != null && c.d_park <= 500 ? rgb(C.green) : mix(C.grey, C.navy, 0.55);
       if (lens === "metro") return c.d_metro != null && c.d_metro <= 800 ? rgb(C.cyan) : mix(C.grey, C.navy, 0.55);
+      if (lens === "school") return c.d_school != null && c.d_school <= 1000 ? rgb(C.ivory) : mix(C.grey, C.navy, 0.55);
+      if (lens === "health") return c.d_health != null && c.d_health <= 2000 ? rgb(C.amber) : mix(C.grey, C.navy, 0.55);
       return rgb(scale(c.density));
     });
   }, [pg, cells, lens, scale, sel]);

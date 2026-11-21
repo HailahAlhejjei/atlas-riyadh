@@ -7,7 +7,9 @@ import type { Building, BuildingTileRef } from "../data/schema";
 import type { GeoJob } from "../geometry/geometry.worker";
 import { paint, useGeometry } from "../geometry/useGeometry";
 
-const MAX_TILES = { desktop: 36, compact: 14 };
+const MAX_TILES = { desktop: 110, compact: 26 };
+/** Height drawn for buildings with no mapped height: a typical two-storey Riyadh villa. An assumption, labelled in the UI. */
+export const ASSUMED_H = 7;
 
 /**
  * Streams real building footprints (Microsoft ML, 2 km tiles) around the camera
@@ -25,7 +27,7 @@ export function BuildingTiles({ base, tiles, compact }: { base: string; tiles: B
     if (controls?.getTarget) controls.getTarget(t);
     else t.set(0, 0, 0);
     const dist = camera.position.distanceTo(t);
-    const R = dist > 48000 ? 0 : Math.min(9000, Math.max(3200, dist * 0.42));
+    const R = dist > 90000 ? 0 : Math.min(compact ? 8000 : 20000, Math.max(4000, dist * 0.55));
     const need = tiles
       .map((tt) => ({ id: tt.id, d: Math.hypot(tt.x - t.x, tt.y + t.z) }))
       .filter((o) => o.d < R)
@@ -68,7 +70,7 @@ function BuildingTile({ url }: { url: string }) {
       dead = true;
     };
   }, [url, items]);
-  const job = useMemo<GeoJob | null>(() => (items ? { op: "extrude", items: items.map((b) => ({ rings: [b.r], h: b.h })) } : null), [items]);
+  const job = useMemo<GeoJob | null>(() => (items ? { op: "extrude", items: items.map((b) => ({ rings: [b.r], h: b.s === "d" ? ASSUMED_H : b.h })) } : null), [items]);
   const pg = useGeometry(job);
   useLayoutEffect(() => {
     if (!pg) return;

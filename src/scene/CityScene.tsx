@@ -12,6 +12,8 @@ import { Plinth } from "./Plinth";
 import { BuildingTiles } from "./BuildingTiles";
 import { Landmarks } from "./Landmarks";
 import { Strata } from "./Strata";
+import { FootprintMap } from "./FootprintMap";
+import { FacilityLabels } from "./FacilityLabels";
 import { ShadowRig } from "./ShadowRig";
 import { DEFAULT_CITY } from "../config/cities";
 
@@ -59,10 +61,11 @@ export function CityScene({ data, compact }: { data: Partial<CityData>; compact:
       <LayerGroup id="buildings">
         {data.districts && <DistrictsLayer items={data.districts.items} />}
         {data.buildings && <BuildingsLayer items={data.buildings.items} landmarks={data.buildings.landmarks ?? []} lowDetail={lowPerf} />}
+        {data.buildings && <FootprintMap meta={meta} base={DEFAULT_CITY.dataPath} />}
         {data.buildings?.tiles && <BuildingTiles base={DEFAULT_CITY.dataPath} tiles={data.buildings.tiles} compact={compact} />}
         {data.buildings && <Landmarks items={data.buildings.items} meta={meta} />}
       </LayerGroup>
-      <LayerGroup id="green">{data.green && <GreenLayer items={data.green.items} />}</LayerGroup>
+      <LayerGroup id="green">{data.green && <GreenLayer items={data.green.items} points={data.green.points ?? []} walkways={data.green.walkways ?? []} />}</LayerGroup>
       <LayerGroup id="transport">
         {data.transport && <TransportLayer roads={data.transport.roads} metro={data.transport.metro} stations={data.transport.stations} />}
       </LayerGroup>
@@ -72,6 +75,7 @@ export function CityScene({ data, compact }: { data: Partial<CityData>; compact:
       {data.districts && <SelectionColumn districts={data.districts.items} />}
       <Measure meta={meta} />
       <Strata meta={meta} />
+      {data.facilities && <FacilityLabels items={data.facilities.items} />}
     </Canvas>
   );
 }

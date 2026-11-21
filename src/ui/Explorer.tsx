@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useT, type Key } from "../i18n";
 import { lazy, Suspense, useState } from "react";
 import { C, LAYER_COLOR, LAYER_ORDER } from "../config/theme";
 import { fmtCoord } from "../data/geo";
@@ -22,6 +23,7 @@ export function Explorer({ city, compact }: { city: CityDataState; compact: bool
   const measure = useStore((s) => s.measure.active);
   const panelsOpen = useStore((s) => s.panelsOpen);
   const [about, setAbout] = useState(false);
+  const t = useT();
   const [tour, setTour] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
 
@@ -34,19 +36,19 @@ export function Explorer({ city, compact }: { city: CityDataState; compact: bool
         </button>
         <div className="hud-tools">
           <button className={`tool desk ${measure ? "on" : ""}`} onClick={() => setState((s) => ({ measure: { active: !s.measure.active, pts: [] } }))} title="Measure a distance: click two points">
-            Measure
+            {t("measure")}
           </button>
           <button className="tool" onClick={() => setState((s) => ({ cameraNonce: s.cameraNonce + 1, focus: null, highlight: [], selection: null }))} title="Reset the camera">
-            Reset view
+            {t("reset")}
           </button>
-          <button className="tool" onClick={() => setTour(true)} title="Replay the guided peel">Tour</button>
-          <button className="tool" onClick={() => setAbout(true)}>Sources</button>
+          <button className="tool" onClick={() => setTour(true)} title="Replay the guided peel">{t("tour")}</button>
+          <button className="tool" onClick={() => setAbout(true)}>{t("sources")}</button>
         </div>
       </header>
 
       {compact && (
         <button className="sheet-toggle" onClick={() => setState((s) => ({ panelsOpen: !s.panelsOpen }))}>
-          {panelsOpen ? "Hide controls" : "Layers"}
+          {panelsOpen ? t("hide_controls") : t("layers_btn")}
         </button>
       )}
 
@@ -59,7 +61,7 @@ export function Explorer({ city, compact }: { city: CityDataState; compact: bool
 
       <div className="hud-bottom mono">
         <span>{cursor ? fmtCoord(cursor.lon, cursor.lat) : fmtCoord(meta.origin.lon, meta.origin.lat)}</span>
-        {measure && <span className="hint">click two points to measure</span>}
+        {measure && <span className="hint">{t("measure_hint")}</span>}
         <span className="attrib">
           © <a href={meta.sources.osm.url} target="_blank" rel="noreferrer">OpenStreetMap contributors</a> (ODbL) ·{" "}
           <a href={meta.sources.kontur.url} target="_blank" rel="noreferrer">Kontur Population</a> (CC BY 4.0)
@@ -69,7 +71,7 @@ export function Explorer({ city, compact }: { city: CityDataState; compact: bool
       {!compact && (
         <>
           <button className={`map-toggle tool ${mapOpen ? "on" : ""}`} onClick={() => setMapOpen(!mapOpen)} aria-expanded={mapOpen}>
-            {mapOpen ? "Hide map" : "Where is this?"}
+            {mapOpen ? t("hide_map") : t("where")}
           </button>
           {mapOpen && (
             <Suspense fallback={<div className="locator loading mono">loading map…</div>}>
@@ -100,6 +102,7 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
   const sep = useStore((s) => s.separation);
   const lens = useStore((s) => s.lens);
   const order = [...LAYER_ORDER].reverse();
+  const t = useT();
   const [more, setMore] = useState(compact);
 
   return (
@@ -111,7 +114,7 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
     >
       <div className="peel">
         <div className="peel-head">
-          <h2>Peel the city apart</h2>
+          <h2>{t("peel_title")}</h2>
           <span className="mono">{Math.round(sep * 100)}%</span>
         </div>
         <input
@@ -119,8 +122,8 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
           onChange={(e) => setState({ separation: +e.target.value })}
         />
         <div className="peel-btns">
-          <button className={sep > 0.5 ? "on" : ""} onClick={() => setState({ separation: 1 })}>Peel apart</button>
-          <button className={sep < 0.05 ? "on" : ""} onClick={() => setState({ separation: 0 })}>Combine</button>
+          <button className={sep > 0.5 ? "on" : ""} onClick={() => setState({ separation: 1 })}>{t("peel_apart")}</button>
+          <button className={sep < 0.05 ? "on" : ""} onClick={() => setState({ separation: 0 })}>{t("combine")}</button>
         </div>
       </div>
 
@@ -134,13 +137,13 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
               <div className="layer-row">
                 <button className="swatch" style={{ "--c": LAYER_COLOR[id] } as React.CSSProperties} onClick={() => setLayer(id, { visible: !layers[id].visible })} aria-pressed={layers[id].visible} aria-label={`Toggle ${lm.title}`} />
                 <button className="layer-name" onClick={() => setState({ selection: { kind: "layer", id }, panelsOpen: true })}>
-                  {lm.title}
+                  {t(`L_${id}` as Key)}
                   <span className="mono sub">
-                    {st === "loading" ? "loading…" : st === "error" ? "unavailable" : `${lm.count.toLocaleString("en-US")} · ${lm.date?.slice(0, 7)}`}
+                    {st === "loading" ? t("loading") : st === "error" ? t("unavailable") : `${lm.count.toLocaleString("en-US")} · ${lm.date?.slice(0, 7)}`}
                   </span>
                 </button>
                 <button className={`solo-btn ${solo === id ? "on" : ""}`} onClick={() => setState({ solo: solo === id ? null : id })} title="Show only this layer">
-                  {solo === id ? "All" : "Only"}
+                  {solo === id ? t("all") : t("only")}
                 </button>
               </div>
               {more && (
@@ -156,19 +159,19 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
       </ul>
 
       <button className="more-btn" onClick={() => setMore(!more)} aria-expanded={more}>
-        {more ? "Fewer controls" : "Opacity & overlaps"} <span aria-hidden>{more ? "−" : "+"}</span>
+        {more ? t("fewer") : t("more")} <span aria-hidden>{more ? "−" : "+"}</span>
       </button>
 
       {more && (<>
       <div className="lens">
-        <h3>Inspect overlaps</h3>
-        <p className="muted small">Recolour population by access to another layer.</p>
+        <h3>{t("overlaps")}</h3>
+        <p className="muted small">{t("overlaps_t")}</p>
         <div className="seg">
           {(
             [
-              ["none", "Density"],
-              ["park", "≤500 m to park"],
-              ["metro", "≤800 m to metro"],
+              ["none", t("lens_none")],
+              ["park", t("lens_park")],
+              ["metro", t("lens_metro")],
             ] as [Lens, string][]
           ).map(([k, l]) => (
             <button key={k} className={lens === k ? "on" : ""} onClick={() => {
@@ -182,10 +185,10 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
 
       <div className="future">
         <div title={meta.time_travel.reason}>
-          <span className="mono">TIME</span> No timeline yet. <button className="link" onClick={() => setState({ selection: { kind: "layer", id: "districts" } })}>Why?</button>
+          <span className="mono">{t("time_label")}</span> {t("time_t")} <button className="link" onClick={() => setState({ selection: { kind: "layer", id: "districts" } })}>{t("why")}</button>
         </div>
         <div title={meta.compare.reason}>
-          <span className="mono">COMPARE</span> Coming once a second city is built.
+          <span className="mono">{t("compare_label")}</span> {t("compare_t")}
         </div>
       </div>
       </>)}
@@ -194,26 +197,32 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
 }
 
 function Legend({ lens }: { lens: Lens }) {
+  const t = useT();
   if (lens === "park")
-    return <div className="legend"><span><i style={{ background: C.green }} />within 500 m</span><span><i style={{ background: "#3D4B58" }} />farther</span></div>;
+    return <div className="legend"><span><i style={{ background: C.green }} />{t("leg_within_park")}</span><span><i style={{ background: "#3D4B58" }} />{t("leg_farther")}</span></div>;
+  if (lens === "school")
+    return <div className="legend"><span><i style={{ background: C.ivory }} />{t("leg_school")}</span><span><i style={{ background: "#3D4B58" }} />{t("leg_farther")}</span></div>;
+  if (lens === "health")
+    return <div className="legend"><span><i style={{ background: C.amber }} />{t("leg_health")}</span><span><i style={{ background: "#3D4B58" }} />{t("leg_farther")}</span></div>;
   if (lens === "metro")
-    return <div className="legend"><span><i style={{ background: C.cyan }} />within 800 m</span><span><i style={{ background: "#3D4B58" }} />farther</span></div>;
+    return <div className="legend"><span><i style={{ background: C.cyan }} />{t("leg_within_metro")}</span><span><i style={{ background: "#3D4B58" }} />{t("leg_farther")}</span></div>;
   return (
     <div className="legend grad">
-      <span className="mono">low</span>
+      <span className="mono">{t("leg_low")}</span>
       <i style={{ background: `linear-gradient(90deg, #22354A, ${C.popLow}, #7F8C8A, ${C.sand}, ${C.amber})` }} />
-      <span className="mono">high density</span>
+      <span className="mono">{t("leg_high")}</span>
     </div>
   );
 }
 
 function About({ city, onClose }: { city: CityDataState; onClose: () => void }) {
+  const t = useT();
   const m = city.data.meta!;
   return (
     <motion.div className="modal-bg" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div className="modal" onClick={(e) => e.stopPropagation()} initial={{ y: 20 }} animate={{ y: 0 }}>
         <button className="close" onClick={onClose} aria-label="Close">×</button>
-        <h2>Sources & method</h2>
+        <h2>{t("sources_title")}</h2>
         <p>
           The model covers Riyadh's urban footprint, {m.study_km2} km². {m.footprint?.method}
           Data was preprocessed by <code>scripts/build_city.py</code> on {m.built.slice(0, 10)} and projected to local metres.

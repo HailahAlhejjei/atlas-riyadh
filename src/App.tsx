@@ -4,6 +4,7 @@ import { DEFAULT_CITY } from "./config/cities";
 import { useCityData } from "./data/useCityData";
 import { CityScene } from "./scene/CityScene";
 import { useStore } from "./store";
+import { toggleLang, useDocumentLang, useT } from "./i18n";
 import { Explorer } from "./ui/Explorer";
 import { Landing } from "./ui/Landing";
 
@@ -24,6 +25,8 @@ export default function App() {
   const phase = useStore((s) => s.phase);
   const compact = useCompact();
   const meta = city.data.meta;
+  useDocumentLang();
+  const t = useT();
 
   if (city.status.meta === "error") {
     return (
@@ -38,6 +41,7 @@ export default function App() {
   return (
     <div className={`app phase-${phase}`}>
       <div className="stage">{meta && <CityScene data={city.data} compact={compact} />}</div>
+      <button className="lang-btn" onClick={toggleLang}>{t("lang_switch")}</button>
       <AnimatePresence mode="wait">
         {phase === "landing" ? (
           <Landing key="landing" city={city} />

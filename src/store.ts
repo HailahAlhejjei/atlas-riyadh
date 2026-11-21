@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from "react";
 import type { LayerId } from "./data/schema";
+import { initialLang, type Lang } from "./i18n";
 
-export type Lens = "none" | "park" | "metro";
+export type Lens = "none" | "park" | "metro" | "school" | "health";
 
 export type Selection =
   | { kind: "district"; id: string }
@@ -31,6 +32,7 @@ export interface State {
   cameraNonce: number; // bump to reset camera
   focus: { x: number; y: number; nonce: number; zoom?: number } | null;
   panelsOpen: boolean;
+  lang: Lang;
 }
 
 const initial: State = {
@@ -53,6 +55,7 @@ const initial: State = {
   cameraNonce: 0,
   focus: null,
   panelsOpen: typeof window !== "undefined" ? window.innerWidth > 760 : true,
+  lang: initialLang(),
 };
 
 let state = initial;

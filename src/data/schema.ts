@@ -9,7 +9,7 @@ export type Ring = number[];
 export type PolygonRings = Ring[]; // [outer, ...holes]
 
 export type LayerId = "buildings" | "green" | "transport" | "facilities" | "population";
-export type SourceId = "osm" | "kontur" | "msft";
+export type SourceId = "osm" | "kontur" | "msft" | "overture";
 
 export interface Source {
   name: string;
@@ -56,18 +56,22 @@ export interface PopCell {
   density: number; // people / km²
   d_park: number | null; // m to nearest park ≥ 0.5 ha
   d_metro: number | null; // m to nearest metro station
+  d_school?: number | null; // m to nearest mapped school
+  d_health?: number | null; // m to nearest hospital/clinic
   r: Ring;
 }
 
 export type RoadClass = "motorway" | "trunk" | "primary" | "secondary" | "tertiary";
 export interface Road { cls: RoadClass; name: string | null; l: Ring[] }
 export interface MetroLine { name: string | null; l: Ring[] }
-export interface Station { name: string | null; x: number; y: number }
+export interface Station { name: string | null; name_ar?: string | null; x: number; y: number }
 
 export interface GreenItem { kind: string; name: string | null; area: number; p: PolygonRings[] }
+export interface GreenPoint { kind: string; name: string | null; name_ar?: string | null; x: number; y: number }
+export interface Walkway { name: string | null; name_ar?: string | null; kind: string; l: Ring[] }
 
 export type FacilityCat = "education" | "health" | "culture" | "worship";
-export interface Facility { cat: FacilityCat; type: string; name: string | null; x: number; y: number }
+export interface Facility { cat: FacilityCat; type: string; name: string | null; name_ar?: string | null; src?: "osm" | "overture"; x: number; y: number }
 
 export interface Building { h: number; s: "t" | "l" | "d"; r: Ring; n?: string }
 export interface BuildingTileRef { id: string; x: number; y: number; n: number }
@@ -106,6 +110,9 @@ export interface Insight {
   unit?: string;
   n?: number;
   stations?: number;
+  per?: number;
+  per_label?: string;
+  count?: number;
   totals_km?: Record<string, number>;
   layers: LayerId[];
   method: string;
@@ -115,7 +122,7 @@ export interface CityData {
   meta: CityMeta;
   population?: { cells: PopCell[] };
   transport?: { roads: Road[]; metro: MetroLine[]; stations: Station[] };
-  green?: { items: GreenItem[] };
+  green?: { items: GreenItem[]; points?: GreenPoint[]; walkways?: Walkway[] };
   facilities?: { items: Facility[] };
   buildings?: { items: Building[]; landmarks?: Landmark[]; tile_size?: number; tiles?: BuildingTileRef[] };
   districts?: { items: District[] };

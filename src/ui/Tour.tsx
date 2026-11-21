@@ -1,27 +1,28 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useT, type Key } from "../i18n";
 import { useEffect, useState } from "react";
 import { setState, type Lens } from "../store";
 
 interface Step {
-  title: string;
-  body: string;
+  title: Key;
+  body: Key;
   apply: { separation: number; lens: Lens };
 }
 
 const STEPS: Step[] = [
   {
-    title: "This is Riyadh, taken apart",
-    body: "Each floating sheet is a separate layer of real data: where people live, public facilities, roads and metro, green space, and the buildings underneath.",
+    title: "tour1_t",
+    body: "tour1_b",
     apply: { separation: 1, lens: "none" },
   },
   {
-    title: "See how the layers overlap",
-    body: "Population is now recoloured green where people live within 500 m of a park, and grey where they don't. Use “Inspect overlaps” to try metro access too.",
+    title: "tour2_t",
+    body: "tour2_b",
     apply: { separation: 0.55, lens: "park" },
   },
   {
-    title: "Put it back together",
-    body: "Combine the layers, then click any neighbourhood for its numbers, or open Discover to fly to Kingdom Centre and the other landmarks.",
+    title: "tour3_t",
+    body: "tour3_b",
     apply: { separation: 0, lens: "none" },
   },
 ];
@@ -34,7 +35,7 @@ const seen = () => {
     return false;
   }
 };
-const markSeen = () => {
+export const markTourSeen = () => {
   try {
     localStorage.setItem(KEY, "1");
   } catch {
@@ -45,6 +46,7 @@ const markSeen = () => {
 /** Three-step guided first peel, shown once on first entry; skippable with Esc. */
 export function Tour({ forceOpen, onClose }: { forceOpen: boolean; onClose: () => void }) {
   const [step, setStep] = useState<number | null>(null);
+  const t = useT();
 
   useEffect(() => {
     if (forceOpen || !seen()) {
@@ -72,7 +74,7 @@ export function Tour({ forceOpen, onClose }: { forceOpen: boolean; onClose: () =
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const finish = () => {
-    markSeen();
+    markTourSeen();
     setStep(null);
     setState({ separation: 0, lens: "none" });
     onClose();
@@ -94,17 +96,17 @@ export function Tour({ forceOpen, onClose }: { forceOpen: boolean; onClose: () =
           transition={{ duration: 0.35 }}
         >
           <div className="tour-head mono">
-            <span>GUIDED PEEL</span>
+            <span>{t("tour_label")}</span>
             <span>
               {step + 1} / {STEPS.length}
             </span>
           </div>
-          <h2>{STEPS[step].title}</h2>
-          <p>{STEPS[step].body}</p>
+          <h2>{t(STEPS[step].title)}</h2>
+          <p>{t(STEPS[step].body)}</p>
           <div className="tour-actions">
-            <button className="link" onClick={finish}>Skip tour</button>
+            <button className="link" onClick={finish}>{t("tour_skip")}</button>
             <button className="tour-next" onClick={next} autoFocus>
-              {step < STEPS.length - 1 ? "Next →" : "Start exploring"}
+              {step < STEPS.length - 1 ? t("tour_next") : t("tour_done")}
             </button>
           </div>
         </motion.div>
