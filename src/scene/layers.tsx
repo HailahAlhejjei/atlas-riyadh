@@ -325,38 +325,55 @@ function Stations({ items }: { items: Station[] }) {
 
 /* ───────────────────────────── Facilities */
 export function FacilitiesLayer({ items }: { items: Facility[] }) {
+  // invisible pins keep hover/click; what you see are glowing dots
   const ref = useRef<InstancedMesh>(null);
   useLayoutEffect(() => {
     const m = ref.current;
     if (!m) return;
     const o = new Object3D();
-    const c = new Color();
     items.forEach((f, i) => {
-      const big = f.type === "hospital" || f.type === "university";
-      o.position.set(f.x, big ? 60 : 40, -f.y);
-      o.scale.set(big ? 1.5 : 1, big ? 1.5 : 1, big ? 1.5 : 1);
+      o.position.set(f.x, 40, -f.y);
       o.updateMatrix();
       m.setMatrixAt(i, o.matrix);
-      m.setColorAt(i, c.set(FAC_COLOR[f.cat]));
     });
     m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
     m.computeBoundingSphere();
+  }, [items]);
+  const dots = useMemo(() => {
+    // schools & hospitals big and bright; mosques/libraries small and quiet, drawn first (underneath)
+    const major = (f: Facility) => f.cat === "education" || f.cat === "health";
+    const build = (pick: (f: Facility) => boolean) => {
+      const sel = items.filter(pick);
+      const p = new Float32Array(sel.length * 3), c = new Float32Array(sel.length * 3);
+      sel.forEach((f, i) => {
+        const big = f.type === "hospital" || f.type === "university";
+        p.set([f.x, big ? 70 : 52, -f.y], i * 3);
+        const k = new Color(FAC_COLOR[f.cat]);
+        c.set([k.r, k.g, k.b], i * 3);
+      });
+      return { p, c };
+    };
+    return { major: build(major), minor: build((f) => !major(f)) };
   }, [items]);
   const h = useMemo(
     () =>
       hoverHandlers((e) => {
         const f = e.instanceId != null ? items[e.instanceId] : null;
-        return f ? { label: f.name ?? typeLabel(f.type), sub: typeLabel(f.type), select: { kind: "facility", index: e.instanceId! } } : null;
+        const ar = getState().lang === "ar";
+        return f ? { label: (ar && f.name_ar) || f.name || typeLabel(f.type), sub: typeLabel(f.type), select: { kind: "facility", index: e.instanceId! } } : null;
       }),
     [items],
   );
   if (!items.length) return null;
   return (
-    <instancedMesh ref={ref} args={[undefined, undefined, items.length]} castShadow {...h}>
-      <cylinderGeometry args={[5, 1.2, 80, 6]} />
-      <meshStandardMaterial roughness={0.5} />
-    </instancedMesh>
+    <group>
+      <instancedMesh ref={ref} args={[undefined, undefined, items.length]} {...h}>
+        <cylinderGeometry args={[45, 45, 90, 6]} />
+        <meshBasicMaterial colorWrite={false} depthWrite={false} transparent opacity={0} />
+      </instancedMesh>
+      <GlowDots positions={dots.minor.p} colors={dots.minor.c} size={36} minPx={2.4} gain={0.9} />
+      <GlowDots positions={dots.major.p} colors={dots.major.c} size={150} minPx={7.5} gain={2.2} twinkle={0.25} />
+    </group>
   );
 }
 export const typeLabel = (t: string) =>

@@ -35,14 +35,18 @@ export const ROAD_WIDTH: Record<RoadClass, number> = {
   motorway: 26, trunk: 18, primary: 13, secondary: 9, tertiary: 6,
 };
 
+/** Schools vs hospitals: two strongly separated hues (CVD ΔE 24). Mosques/libraries stay quiet. */
 export const FAC_COLOR: Record<FacilityCat, string> = {
-  education: C.ivory,
-  health: C.amber,
-  culture: C.cyan,
-  worship: C.sand,
+  education: "#4D8DFF",
+  health: "#FF4D5A",
+  culture: "#8B9AA7",
+  worship: "#6F6250",
 };
 export const FAC_LABEL: Record<FacilityCat, string> = {
-  education: "Education", health: "Health", culture: "Libraries", worship: "Mosques",
+  education: "Schools & universities", health: "Hospitals & clinics", culture: "Libraries", worship: "Mosques",
+};
+export const FAC_LABEL_AR: Record<FacilityCat, string> = {
+  education: "المدارس والجامعات", health: "المستشفيات والمراكز الصحية", culture: "المكتبات", worship: "المساجد",
 };
 
 /** Height (m) of a population hexagon per person/km². */

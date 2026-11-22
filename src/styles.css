@@ -435,3 +435,8 @@ html[lang="ar"] .stack-label { font-family: "IBM Plex Sans Arabic", var(--body);
 .people-key i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .people-key b { margin-inline-start: auto; font-weight: 400; color: var(--grey); font-size: 10.5px; }
 .people-key .pk-note { grid-column: 1 / -1; color: var(--grey); font-size: 10.5px; }
+
+.fac-key { grid-template-columns: 1fr; }
+.fac-key .minor { opacity: 0.7; }
+.fac-education i { color: #4D8DFF !important; }
+.fac-health i { color: #FF4D5A !important; }

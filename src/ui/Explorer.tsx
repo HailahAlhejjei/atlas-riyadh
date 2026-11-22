@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useT, type Key } from "../i18n";
 import { lazy, Suspense, useState } from "react";
-import { C, GROUPS, LAYER_COLOR, LAYER_ORDER } from "../config/theme";
+import { C, FAC_COLOR, FAC_LABEL, FAC_LABEL_AR, GROUPS, LAYER_COLOR, LAYER_ORDER } from "../config/theme";
 import { fmtCoord } from "../data/geo";
-import type { DataKey, LayerId } from "../data/schema";
+import type { DataKey, FacilityCat, LayerId } from "../data/schema";
 import type { CityDataState } from "../data/useCityData";
 import { getState, setLayer, setState, useStore, type Lens } from "../store";
 import { Discover } from "./Discover";
@@ -147,6 +147,7 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
                 </button>
               </div>
               {id === "population" && <PeopleKey meta={meta} />}
+              {id === "facilities" && <FacilityKey meta={meta} />}
               {more && (
                 <input
                   type="range" min={0.05} max={1} step={0.01} value={layers[id].opacity} aria-label={`${lm.title} opacity`}
@@ -194,6 +195,23 @@ function LayerPanel({ city, compact }: { city: CityDataState; compact: boolean }
       </div>
       </>)}
     </motion.aside>
+  );
+}
+
+function FacilityKey({ meta }: { meta: CityDataState["data"]["meta"] }) {
+  const ar = useStore((s) => s.lang) === "ar";
+  const by = (meta?.layers.facilities.by_cat as Record<FacilityCat, number> | undefined) ?? ({} as Record<FacilityCat, number>);
+  const cats: FacilityCat[] = ["education", "health", "worship"];
+  return (
+    <ul className="people-key fac-key">
+      {cats.map((k) => (
+        <li key={k} className={k === "worship" ? "minor" : undefined}>
+          <i style={{ background: FAC_COLOR[k], boxShadow: k === "worship" ? undefined : `0 0 8px ${FAC_COLOR[k]}` }} />
+          <span>{ar ? FAC_LABEL_AR[k] : FAC_LABEL[k]}</span>
+          <b className="mono">{(by[k] ?? 0).toLocaleString("en-US")}</b>
+        </li>
+      ))}
+    </ul>
   );
 }
 
