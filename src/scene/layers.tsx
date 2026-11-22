@@ -13,7 +13,7 @@ import { fmtInt } from "../data/geo";
 import type { BusStop, GreenPoint, Walkway, Building, District, Landmark, Facility, GreenItem, MetroLine, PopCell, Road, Station } from "../data/schema";
 import { paint, useGeometry } from "../geometry/useGeometry";
 import type { GeoJob } from "../geometry/geometry.worker";
-import { getState, setState, useStore, type Lens } from "../store";
+import { getState, isShown, setState, useStore, type Lens } from "../store";
 import { hoverHandlers } from "./pointer";
 import { GlowDots } from "./GlowDots";
 import { MODELED } from "./Landmarks";
@@ -43,6 +43,8 @@ export function BuildingsLayer({ items, landmarks, lowDetail }: { items: Buildin
   // landmark names only once the camera is close enough for them not to pile up
   const [near, setNear] = useState(false);
   useStore((s) => s.phase); // re-render labels when entering/leaving the landing
+  // landmark names belong to the Buildings layer: hide them whenever that layer is hidden or another is soloed
+  const buildingsOn = useStore((s) => isShown(s, "buildings"));
   const lastCheck = useRef(0);
   useFrame(({ camera, clock }) => {
     if (clock.elapsedTime - lastCheck.current < 0.3) return;
@@ -56,7 +58,9 @@ export function BuildingsLayer({ items, landmarks, lowDetail }: { items: Buildin
       <mesh geometry={pg.geometry} castShadow receiveShadow raycast={() => null}>
         <meshStandardMaterial vertexColors roughness={0.8} metalness={0.04} />
       </mesh>
-      {(getState().phase === "landing"
+      {(!buildingsOn && getState().phase !== "landing"
+        ? []
+        : getState().phase === "landing"
         ? landmarks.filter((l) => l.name === "Kingdom Centre" || l.name === "Al Faisaliyah Tower")
         : near ? landmarks.slice(0, lowDetail ? 4 : 9) : spread(landmarks, lowDetail ? 3 : 5)).map((l) => (
         <Html key={l.name} position={[l.x, near ? l.h + 30 : 1700, -l.y]} zIndexRange={[8, 0]}>

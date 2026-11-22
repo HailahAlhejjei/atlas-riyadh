@@ -1,13 +1,19 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { getState, setState, type Selection } from "../store";
 
+/** True when the object and every ancestor is visible (hidden layers must not answer hover/click). */
+function reallyVisible(o: { visible: boolean; parent: unknown } | null): boolean {
+  for (let n = o; n; n = n.parent as typeof o) if (!n.visible) return false;
+  return true;
+}
+
 /** Shared pointer handling so layers behave consistently. */
 export function hoverHandlers(
   resolve: (e: ThreeEvent<PointerEvent | MouseEvent>) => { label: string; sub?: string; select: Selection } | null,
 ) {
   return {
     onPointerMove: (e: ThreeEvent<PointerEvent>) => {
-      if (getState().phase !== "explore") return;
+      if (getState().phase !== "explore" || !reallyVisible(e.object)) return; // let the event reach visible layers
       e.stopPropagation();
       const r = resolve(e);
       if (!r) return setState({ hover: null });
@@ -20,7 +26,7 @@ export function hoverHandlers(
     },
     onClick: (e: ThreeEvent<MouseEvent>) => {
       const s = getState();
-      if (s.phase !== "explore") return;
+      if (s.phase !== "explore" || !reallyVisible(e.object)) return;
       e.stopPropagation();
       if (e.delta > 6) return; // was a drag
       if (s.measure.active) {
