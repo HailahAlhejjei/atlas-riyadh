@@ -136,7 +136,7 @@ export function DistrictsLayer({ items }: { items: District[] }) {
 /* ───────────────────────────── Green spaces */
 export function GreenLayer({ items, points, walkways }: { items: GreenItem[]; points: GreenPoint[]; walkways: Walkway[] }) {
   const job = useMemo<GeoJob>(
-    () => ({ op: "extrude", items: items.flatMap((g) => g.p.map((rings) => ({ rings, h: 3, base: 0.5 }))) }),
+    () => ({ op: "extrude", items: items.flatMap((g, gi) => g.p.map((rings) => ({ rings, h: (g.kind === "park" || g.kind === "garden" ? 4 : 2.6) + (gi % 9) * 0.35, base: 0.5 }))) }),
     [items],
   );
   const owner = useMemo(() => items.flatMap((g, i) => g.p.map(() => i)), [items]);

@@ -7,6 +7,8 @@ import { useEffect, useMemo } from "react";
 import { AdditiveBlending, BufferAttribute, BufferGeometry, ShaderMaterial } from "three";
 
 const vert = /* glsl */ `
+  #include <common>
+  #include <logdepthbuf_pars_vertex>
   attribute vec3 color;
   attribute float seed;
   uniform float uSize;
@@ -23,14 +25,18 @@ const vert = /* glsl */ `
     gl_PointSize = clamp(uSize * uScale / -mv.z, uMinPx, 40.0) * tw;
     vFade = clamp(uSize * uScale / -mv.z / 2.5, 0.9, 1.0); // far dots dimmer so the city doesn't white out
     gl_Position = projectionMatrix * mv;
+    #include <logdepthbuf_vertex>
   }`;
 
 const frag = /* glsl */ `
+  #include <common>
+  #include <logdepthbuf_pars_fragment>
   uniform float uOpacity;
   uniform float uGain;
   varying vec3 vColor;
   varying float vFade;
   void main() {
+    #include <logdepthbuf_fragment>
     float d = length(gl_PointCoord - 0.5);
     if (d > 0.5) discard;
     float core = smoothstep(0.24, 0.0, d);

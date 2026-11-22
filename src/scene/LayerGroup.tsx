@@ -56,9 +56,9 @@ export function LayerGroup({ id, children }: { id: LayerId; children: ReactNode 
     for (const m of g.userData.mats as Material[]) {
       const o2 = op * m.userData.base;
       m.opacity = o2;
-      const t = o2 < 0.995 || m.userData.baseTransparent === true;
-      if (m.transparent !== t) {
-        m.transparent = t;
+      // switch to transparent once (never back while fading) so the shader isn't recompiled every frame
+      if (!m.transparent && o2 < 0.995) {
+        m.transparent = true;
         m.needsUpdate = true;
       }
       m.depthWrite = m.userData.baseDepthWrite === false ? false : o2 > 0.5;

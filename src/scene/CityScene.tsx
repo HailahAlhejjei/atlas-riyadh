@@ -27,8 +27,8 @@ export function CityScene({ data, compact }: { data: Partial<CityData>; compact:
     <Canvas
       shadows={shadows}
       dpr={[1, compact ? 1.5 : 2]}
-      camera={{ fov: compact ? 42 : 34, near: 30, far: 300000, position: [36000, 17000, 27000] }}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      camera={{ fov: compact ? 42 : 34, near: 40, far: 300000, position: [36000, 17000, 27000] }}
+      gl={{ antialias: true, powerPreference: "high-performance", logarithmicDepthBuffer: true }}
       onPointerMissed={() => setState({ selection: null })}
       onPointerLeave={() => setState({ cursor: null, hover: null })}
     >
